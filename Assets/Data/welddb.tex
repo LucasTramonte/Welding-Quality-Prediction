@@ -1,0 +1,202 @@
+\hsize=6.25truein
+\vsize=9.65truein
+\tolerance=15000
+\pretolerance=15000
+\parindent=0.0in
+\font\sym=cmex10
+\def\up#1{\raise3em\hbox{#1}}
+\def\textindent#1{\noindent\llap{#1\enspace}\ignorespaces}
+\def\llap#1{\noindent\hbox to \parindent{#1\hfil}}
+\def\uncatcodespecials{\def\do##1{\catcode`##1=12 }\dospecials}
+\def\setupverbatim{\tt
+ \obeylines \uncatcodespecials \obeyspaces }
+{\obeyspaces\global\let =\ } %
+\def\verbatim{\begingroup\setupverbatim\doverbatim}
+\def\doverbatim#1{\def\next##1#1{##1\endgroup}\next}
+\font\dunh=cmdunh10 at 10 truept
+\font\vtt=cmvtt10 at 10 truept
+\font\ssdc=cmssdc10 at 10 truept
+\font\sans=cmss10 at 10 truept
+\font\fib=cmfib8 at 8 truept
+\font\fun=cmff10 at 10 truept
+\font\ttt=cmtt10 at 10 truept
+\def\today{\ifcase\month\or
+   January\or February\or March\or April\or May\or June\or July\or
+   August\or September\or October\or November\or December\fi
+   \space\number\year}
+\def\bks{$\backslash$}
+\def\display{\obeylines\parindent=0.5in\ttt}
+\def\dv1{\bigskip\bigskip}
+\def\dvd{\bigskip\bigskip\filbreak}
+\font\largeb=cmbx10 scaled\magstep1
+\font\larger=cmr10 scaled\magstep1
+\font\bigbig=cmr10 scaled\magstep4
+\font\ft=cmr5 at 5 truept
+\font\st=cmr7 at 7 truept
+\centerline{\bf MAP DATA LIBRARY}
+\bigskip
+\bigskip
+\bigskip {\largeb  Database MAP\_DATA\_WELD}
+\bigskip\bigskip
+\parindent=0.5in
+\item {\bf 1.} {\largeb Provenance of Data}
+\bigskip
+\item {}Tracey Cool$^\ast$ and H. K. D. H. Bhadeshia, Phase Transformations Group, Department of Materials Science
+and Metallurgy, University of Cambridge, Cambridge, U.K.
+\medskip
+\item{}{$^\ast$TC is now with the Materials Engineering Department, Parsons Power Generation Systems Ltd, Heaton Works, Shields Road, Newcastle Upon Tyne, NE6 2YL}
+\bigskip
+\item {\bf 2.} {\largeb  Purpose}
+\bigskip
+\item {} Provides chemical composition and mechanical property data for a collection of all weld metal deposits.
+\bigskip
+\item {\bf 3.} {\largeb  Description}
+\bigskip
+\item {}  The tar file contains data for the chemical composition of the steels studied, and their room temperature mechanical properties. These data have been collated from available literature. The presence of an ``N'' indicates that the value was not reported in the publication. This is {\it not} meant to be an indication that the value is zero. Although many columns are presented here, those which only have a small amaount of data have been removed for the analysis described in [1 and 2]. This enabled more input lines to be used for neural network analysis.
+\medskip
+\item{} {\bf Column 1} 
+\item{} \indent Carbon concentration / weight \%
+\medskip
+\item{} {\bf Column 2} 
+\item{} \indent Silicon concentration / weight \%
+\medskip
+\item{} {\bf Column 3} 
+\item{} \indent Manganese concentration / weight \%
+\medskip
+\item{} {\bf Column 4} 
+\item{} \indent Sulphur concentration / weight \%
+\medskip
+\item{} {\bf Column 5} 
+\item{} \indent Phosphorus concentration / weight \%
+\medskip
+\item{} {\bf Column 6} 
+\item{} \indent Nickel concentration / weight \%
+\medskip
+\item{} {\bf Column 7} 
+\item{} \indent Chromium concentration / weight \%
+\medskip
+\item{} {\bf Column 8} 
+\item{} \indent Molybdenum concentration / weight \%
+\medskip
+\item{} {\bf Column 9} 
+\item{} \indent Vanadium concentration / weight \%
+\medskip
+\item{} {\bf Column 10} 
+\item{} \indent Copper concentration / weight \%
+\medskip
+\item{} {\bf Column 11} 
+\item{} \indent Cobalt concentration / weight \%
+\medskip
+\item{} {\bf Column 12} 
+\item{} \indent Tungsten concentration / weight \%
+\medskip
+\item{} {\bf Column 13} 
+\item{} \indent Oxygen concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 14} 
+\item{} \indent Titanium concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 15} 
+\item{} \indent Nitrogen concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 16} 
+\item{} \indent Aluminium concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 17} 
+\item{} \indent Boron concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 18} 
+\item{} \indent Niobium concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 19} 
+\item{} \indent Tin concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 20} 
+\item{} \indent Arsenic concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 21} 
+\item{} \indent Antimony concentration / parts per million by weight
+\medskip
+\item{} {\bf Column 22} 
+\item{} \indent Current / A
+\medskip
+\item{} {\bf Column 23} 
+\item{} \indent  Voltage / V
+\medskip
+\item{} {\bf Column 24} 
+\item{} \indent AC or DC
+\medskip
+\item{} {\bf Column 25} 
+\item{} \indent Electrode positive or negative
+\medskip
+\item{} {\bf Column 26}
+\item{} \indent  Heat input / kJ mm$^{-1}$
+\medskip
+\item{} {\bf Column 27} 
+\item{} \indent Interpass temperature / $^{\circ}$C
+\medskip
+\item{} {\bf Column 28} 
+\item{} \indent Type of weld; ShMA = MMA = manual metal arc, SA = SMA = submerged arc, FCA = flux cored arc, GTAA gas tungsten arc automatic, GMAA gas metal arc automatic, SAW-NG = submerged arc narrow gap, GMA-NG = gas metal arc narrow gap, ES = electroslag, TSA = tandem submerged arc.
+\medskip
+\item{} {\bf Column 29} 
+\item{} \indent  Post weld heat treatment temperature / $^{\circ}$C
+\medskip
+\item{} {\bf Column 30} 
+\item{} \indent Post weld heat treatment time / hours
+\medskip
+\item{} {\bf Column 31} 
+\item{} \indent Yield strength / MPa
+\medskip
+\item{} {\bf Column 32}
+\item{} \indent Ultimate tensile strength / MPa
+\medskip
+\item{} {\bf Column 33} 
+\item{} \indent Elongation / \%
+\medskip
+\item{} {\bf Column 34} 
+\item{} \indent Reduction of Area / \%
+\medskip
+\item{} {\bf Column 35} 
+\item{} \indent  Charpy temperature / $^{\circ}$C
+\medskip
+\item{} {\bf Column 36} 
+\item{} \indent Charpy impace toughness / J
+\medskip
+\item{} {\bf Column 37} 
+\item{} \indent Hardness / kg mm$^{-2}$
+\medskip
+\item{} {\bf Column 38} 
+\item{} \indent  50 \% FATT
+\medskip
+\item{} {\bf Column 39} 
+\item{} \indent Primary ferrite in microstructure / \%
+\medskip
+\item{} {\bf Column 40} 
+\item{} \indent Ferrite with second phase / \%
+\medskip
+\item{} {\bf Column 41} 
+\item{} \indent  Acicular ferrite / \%
+\medskip
+\item{} {\bf Column 42} 
+\item{} \indent Martensite / \%
+\medskip
+\item{} {\bf Column 43} 
+\item{} \indent Ferrite with carbide aggreagate / \%
+\medskip
+\item{} {\bf Column 44} 
+\item{} \indent  Weld ID
+\dv1
+\item {\bf 4.} {\largeb  References}
+\bigskip
+\item {} 1. Tracey Cool, Design of Steel Weld Deposits, PhD Thesis, University of Cambridge, 1996
+\medskip
+\item {} 2. Tracey Cool, H. K. D. H. Bhadeshia and David J. C. MacKay, Materials Science and Engineering, 1997
+\bigskip
+\item {\bf 5.} {\largeb  Further Comments}
+\bigskip
+\item {} None.
+\bigskip
+\item {\bf 6.} {\largeb  Keywords}
+\bigskip
+\item {} all weld metal deposits, yield strength, UTS, elongation, charpy toughness
+\bye
