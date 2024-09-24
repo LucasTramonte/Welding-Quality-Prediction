@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/yourusername/Welding-Quality-Prediction.git
+git clone https://github.com/LucasTramonte/Welding-Quality-Prediction.git
 cd Welding-Quality-Prediction
 ```
 
@@ -62,14 +62,14 @@ These models are used to predict both Yield Strength (MPa) and Ultimate Tensile 
 
 ## Streamlit App
 
-A user-friendly web application built with Streamlit is available in the app.py script. This app allows users to:
+A user-friendly web application built with Streamlit is available in the app.py script and can be accessed ([here](https://lucastramonte-welding-quality-prediction-app-tusid3.streamlit.app/)). This app allows users to:
 
 - Select a target variable (either Yield Strength or Ultimate Tensile Strength).
 - Choose between different models for prediction.
 - Visualize model performance, including:
-- Predicted vs Actual values.
-- Feature importance (for tree-based models).
-- Learning curves for different models.
+    - Predicted vs Actual values.
+    - Feature importance (for tree-based models).
+    - Learning curves for different models.
 
 ## Conclusion
 This project demonstrated the use of various machine learning models to predict key weld properties based on chemical composition and welding parameters. The predictive models can help optimize welding processes by providing insights into how different parameters impact the mechanical strength of welds. Further improvements could be made by:
