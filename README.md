@@ -62,7 +62,7 @@ These models are used to predict both Yield Strength (MPa) and Ultimate Tensile 
 
 ## Streamlit App
 
-A user-friendly web application built with Streamlit is available in the app.py script and can be accessed ([here](https://lucastramonte-welding-quality-prediction-app-tusid3.streamlit.app/)). This app allows users to:
+A user-friendly web application built with Streamlit is available in the app.py script and can be accessed [here](https://lucastramonte-welding-quality-prediction-app-tusid3.streamlit.app/). This app allows users to:
 
 - Select a target variable (either Yield Strength or Ultimate Tensile Strength).
 - Choose between different models for prediction.
