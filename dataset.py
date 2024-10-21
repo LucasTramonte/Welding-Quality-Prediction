@@ -51,4 +51,7 @@ def load_and_label_data(file_path):
     data = pd.read_csv('Assets/Data/welddb.csv', delimiter='\s+', header=None)
     data.columns = columns_names
 
+    # Replace 'N' with NaN
+    data.replace('N', pd.NA, inplace=True)
+
     return data

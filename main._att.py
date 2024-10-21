@@ -1,5 +1,3 @@
-import pandas as pd
-
 from dataset import load_and_label_data
 from data_preprocessing import DataPreprocessor
 from modeling import ModelTrainer
@@ -8,9 +6,6 @@ from metrics_evaluation import MetricsEvaluator
 # Load and prepare data
 file_path = 'Assets/Data/welddb.csv'
 data = load_and_label_data(file_path)
-
-# Replace 'N' with NaN
-data.replace('N', pd.NA, inplace=True)
 
 # Instantiate DataPreprocessor
 data_preprocessor = DataPreprocessor(data)
@@ -28,7 +23,8 @@ X_train, X_test, y_train, y_test, preprocessor = data_preprocessor.preprocess_da
     categoric_features=categoric_features, 
     features_to_drop=features_to_drop, 
     drop_columns=drop_columns, 
-    y_imputation='zero'
+    y_imputation='zero',
+    pca_n_components=None
 )
 
 # Instantiate ModelTrainer
