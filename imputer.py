@@ -62,7 +62,6 @@ class DropNanColsTransformer(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, X, y=None):
-        categorical_columns = X.select_dtypes(include=['object', 'category']).columns
         return X.drop(columns=self.cols_to_drop)
     
 class RemoveHighCorrelation(BaseEstimator, TransformerMixin):
@@ -91,7 +90,6 @@ class RemoveHighCorrelation(BaseEstimator, TransformerMixin):
     
     def transform(self, X):
         # Remover as colunas identificadas no subset, mantendo as outras
-        categorical_columns = X.select_dtypes(include=['object', 'category']).columns
         return X.drop(columns=self.to_drop_, errors='ignore')
 
 class LogTransformer(BaseEstimator, TransformerMixin):
@@ -131,7 +129,6 @@ class LogTransformer(BaseEstimator, TransformerMixin):
         X = X.copy()  # Evitar mudanças no dataframe original
         if self.columns_to_log:
             X[self.columns_to_log] = np.log1p(X[self.columns_to_log]+1)  # log(x + 1) para lidar com zeros
-        categorical_columns = X.select_dtypes(include=['object', 'category']).columns
         return X
 
 class ImputeDataFrame(BaseEstimator, TransformerMixin):
@@ -162,56 +159,76 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         self.high_missing = list(set(self.high_missing) - set(self.categoric_features))
         
         # Pipelines de imputação
-        concentration_pipeline = Pipeline(steps=[
+        self.concentration_pipeline = Pipeline(steps=[
             ('fill_zero', SimpleImputer(strategy='constant', fill_value=0))  # Imputação por 0 nas concentrações
         ])
         
-        low_missing_pipeline = Pipeline(steps=[
+        self.low_missing_pipeline = Pipeline(steps=[
             ('median_imputer', SimpleImputer(strategy='median'))  # Imputação por mediana
         ])
         
-        mid_missing_pipeline = Pipeline(steps=[
+        self.mid_missing_pipeline = Pipeline(steps=[
             ('knn_imputer', KNNImputer(n_neighbors=5))  # Imputação KNN
         ])
         
-        high_missing_pipeline = Pipeline(steps=[
+        self.high_missing_pipeline = Pipeline(steps=[
             ('iterative_imputer', IterativeImputer(estimator=DecisionTreeRegressor(), max_iter=10, random_state=0))  # Imputação Iterativa
         ])
         
-        categorical_pipeline = Pipeline(steps=[
+        self.categorical_pipeline = Pipeline(steps=[
             ('mode_imputer', SimpleImputer(strategy='most_frequent'))  # Imputação pela moda
         ])
         
         # Criar um ColumnTransformer para aplicar os diferentes pipelines de imputação
         self.preprocessor = ColumnTransformer(
             transformers=[
-                ('concentration', concentration_pipeline, self.concentration_features),  # Imputação nas colunas de concentração
-                ('low_missing', low_missing_pipeline, self.low_missing),  # Imputação nas colunas com menos de 10% de valores faltantes
-                ('mid_missing', mid_missing_pipeline, self.mid_missing),  # Imputação nas colunas com 10-50% de valores faltantes
-                ('high_missing', high_missing_pipeline, self.high_missing),  # Imputação nas colunas com mais de 50% de valores faltantes
-                ('categoric_impute', categorical_pipeline, self.categoric_features),  # Imputação nas colunas categóricas
+                ('concentration', self.concentration_pipeline, self.concentration_features),  # Imputação nas colunas de concentração
+                ('low_missing', self.low_missing_pipeline, self.low_missing),  # Imputação nas colunas com menos de 10% de valores faltantes
+                ('mid_missing', self.mid_missing_pipeline, self.mid_missing),  # Imputação nas colunas com 10-50% de valores faltantes
+                ('high_missing', self.high_missing_pipeline, self.high_missing),  # Imputação nas colunas com mais de 50% de valores faltantes
+                ('categoric_impute', self.categorical_pipeline, self.categoric_features),  # Imputação nas colunas categóricas
             ],
-            remainder='passthrough'
+            remainder='passthrough'  # Garante que as colunas não transformadas sejam preservadas e na mesma ordem
         )
-
+        
         # Ajustar o imputador nos dados de treino
         self.preprocessor.fit(X)
-
+        
+        # Guardar as colunas originais na ordem original
+        self.original_columns = X.columns
+        
         return self
     
     def transform(self, X):
+        # Aplicar a transformação (sem ajustar novamente) nos dados de teste ou validação
+        X_transformed = self.preprocessor.transform(X)
         
-        # Aplicar a transformação
-        col_names = [f'{i}' for i in range(X.shape[1])]
-        X_transformed = pd.DataFrame(X, columns=col_names)
-        
+        # Convertendo de volta para DataFrame e restaurando a ordem das colunas originais
+        X_transformed = to_dataframe_transformer(X_transformed)
+
         return X_transformed
 
-def identify_binary_columns(df):
-    binary_cols = [col for col in df.columns if df[col].nunique() == 2]  # Colunas com exatamente dois valores distintos
-    non_binary_cols = [col for col in df.columns if col not in binary_cols]
-    return binary_cols, non_binary_cols
-
+def to_dataframe_transformer(X):
+    # Converter o np.array de volta para DataFrame
+    size_df = X.shape[1]
+    col_names = [f'{i}' for i in range(size_df)]
+    df = pd.DataFrame(X, columns=col_names)
+    
+    numeric_features_list = []
+    categorical_features_list = []
+    
+    for col in col_names:
+        try:
+            # Tenta converter a coluna para numérico
+            pd.to_numeric(df[col], errors='raise')  # Levanta erro se não puder converter
+            numeric_features_list.append(col)  # Se for possível, adiciona como numérica
+        except ValueError:
+            # Se houver erro, classificamos como categórica
+            categorical_features_list.append(col)
+    
+    # Convertendo colunas numéricas para float
+    df[numeric_features_list] = df[numeric_features_list].astype('float')    
+    return df
 
 class ScalerTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -227,20 +244,38 @@ class ScalerTransformer(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, X, y=None):
-
         # Aplicar o scaler nas colunas não binárias
         X[self.numeric_features] = self.scaler.transform(X[self.numeric_features])
         return X
     
-# Identifica colunas categóricas dentro do pipeline
-def hot_encoder_categorical_columns(X):
-    categorical_columns = X.select_dtypes(include=['object', 'category']).columns
-    return ColumnTransformer(
-        transformers=[
-            ('onehot', OneHotEncoder(handle_unknown="ignore", sparse_output=False), categorical_columns)
-        ],
-        remainder='passthrough'
-    )
+class CustomOneHotEncoder(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.categories_ = {}
+
+    def fit(self, X, y=None):
+        # Para cada coluna categórica, encontramos as categorias únicas presentes nos dados de treino
+        for col in X.select_dtypes(include=['object', 'category']).columns:
+            self.categories_[col] = X[col].dropna().unique().tolist()
+        return self
+
+    def transform(self, X, y=None):
+        # Aplicamos pd.get_dummies apenas nas colunas categóricas
+        X_transformed = X.copy()
+        for col, categories in self.categories_.items():
+            # Criar dummies com as categorias presentes nos dados de treino
+            dummies = pd.get_dummies(X_transformed[col], prefix=col)
+            # Criar colunas para categorias que não estão presentes nos dados de teste
+            for category in categories:
+                dummy_col = f"{col}_{category}"
+                if dummy_col not in dummies.columns:
+                    dummies[dummy_col] = 0
+            # Reordenar as colunas para garantir a consistência
+            dummies = dummies[[f"{col}_{category}" for category in categories]]
+            # Substituir a coluna original pelos dummies
+            X_transformed = X_transformed.drop(columns=[col])
+            X_transformed = pd.concat([X_transformed, dummies], axis=1)
+        
+        return X_transformed
 
 def create_full_pipeline():
 
@@ -250,8 +285,21 @@ def create_full_pipeline():
         ('remove_high_corr', RemoveHighCorrelation(threshold=0.75)),
         ('log_transform', LogTransformer(threshold_skew=0.5, threshold_outliers=1.5)),  # Definir os thresholds
         ('imputer', ImputeDataFrame()),  # Imputação
-        ('scaler', ScalerTransformer()),  # Aplica o StandardScaler nas colunas não binárias
-        ('one_hot', FunctionTransformer(lambda X: hot_encoder_categorical_columns(X).fit_transform(X))),  # Aplicar o OneHotEncoder
+        ('scaler', ScalerTransformer()),  # Aplica o StandardScaler nas colunas numéricas
+        ('hot_encoder', CustomOneHotEncoder()) # Aplica o Hot Encoder nas colunas categóricas
     ])
     
     return full_pipeline
+
+def HotEncoderCategorical(X):
+    # Identifica as colunas categóricas
+    categorical_cols = X.select_dtypes(include=['object', 'category']).columns
+
+    # Cria um ColumnTransformer que aplica o OneHotEncoder apenas nas colunas categóricas
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_cols)  # OneHot nas categóricas
+        ],
+        remainder='passthrough'  # Deixa as colunas numéricas inalteradas
+    )
+    return preprocessor
