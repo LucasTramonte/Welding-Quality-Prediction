@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
 
 class SelfSupervisedImputer:
     def __init__(self):
@@ -10,39 +12,26 @@ class SelfSupervisedImputer:
         """
         Converte valores não numéricos em y para um valor padrão e garante que todos sejam numéricos.
         """
-        # Substituir valores como '<0.01' por um valor numérico adequado, como 0.01
         y = y.replace('<0.01', 0.01)
-
-        # Garantir que todos os valores sejam convertidos para numérico; valores não convertíveis se tornam NaN
         y = pd.to_numeric(y, errors='coerce')
-        
         return y
 
     def fit(self, X, y):
         """
         Treina o modelo para preencher valores ausentes em y baseado nos dados X.
         """
-        # Converter valores de y para numérico
         y = self._convert_y_values(y)
-
-        # Separar dados onde y não é NaN para treinamento
         X_train = X[~y.isna()]
         y_train = y[~y.isna()]
-
-        # Treinar modelo com os dados disponíveis
         self.model.fit(X_train, y_train)
         
     def transform(self, X, y):
         """
         Preenche os valores ausentes em y baseado em X usando o modelo treinado.
         """
-        # Converter valores de y para numérico
         y = self._convert_y_values(y)
-
-        # Identificar os índices onde y é NaN
         missing_indices = y[y.isna()].index
 
-        # Prever os valores ausentes
         if len(missing_indices) > 0:
             X_missing = X.loc[missing_indices]
             y_pred = self.model.predict(X_missing)
@@ -56,3 +45,33 @@ class SelfSupervisedImputer:
         """
         self.fit(X, y)
         return self.transform(X, y)
+
+def impute_target(y_train, method='zero', X_train=None):
+    """
+    Impute missing values in the target variable using specified methods.
+    """
+    print(f'y_train shape: {y_train.shape} \n y_train number of NaN before imputing {y_train.isnull().sum()}')
+    if method == 'mean':
+        y_train_imputed = y_train.fillna(y_train.mean())
+    elif method == 'median':
+        y_train_imputed = y_train.fillna(y_train.median())
+    elif method == 'ffill':
+        y_train_imputed = y_train.fillna(method='ffill')
+    elif method == 'zero':
+        y_train_imputed = y_train.fillna(0)
+    elif method == 'knn':
+        # Assumindo que detect_type_columns é uma função que retorna apenas as colunas numéricas
+        X_train_numeric = detect_type_columns(X_train)
+        imputer = IterativeImputer(estimator=RandomForestRegressor(), max_iter=10, random_state=42)
+        y_train_reshaped = y_train.values.reshape(-1, 1)
+        X_and_y_train = np.hstack([X_train_numeric, y_train_reshaped])
+        X_and_y_train_imputed = imputer.fit_transform(X_and_y_train)
+        y_train_imputed = pd.Series(X_and_y_train_imputed[:, -1].ravel())
+    
+    print("Number of NaN after imputation:", y_train_imputed.isna().sum())
+    return y_train_imputed
+
+def detect_type_columns(df, type='numeric'):
+    numeric_features = df.select_dtypes(include=['float64', 'int64']).columns
+    categoric_features = df.select_dtypes(include=['object', 'category']).columns
+    return df[numeric_features] if type == 'numeric' else df[categoric_features]
