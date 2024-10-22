@@ -1,5 +1,3 @@
-# metrics_evaluation.py
-
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, r2_score
 import pandas as pd
 import matplotlib.pyplot as plt
