@@ -23,11 +23,12 @@ class LogTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         self.numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
         skewness = X[self.numeric_features].skew()
-        self.columns_to_log = skewness[skewness > self.threshold_skew].index
+        positive_cols = [col for col in self.numeric_features if X[col].min() > 0]
+        self.columns_to_log = skewness[skewness > self.threshold_skew].index.intersection(positive_cols)
         return self
 
     def transform(self, X):
-        # Verifique se há colunas para aplicar o log
+        X_transformed = X.copy()
         if not self.columns_to_log.empty:
-            X[self.columns_to_log] = np.log1p(X[self.columns_to_log])
-        return X
+            X_transformed[self.columns_to_log] = np.log1p(X_transformed[self.columns_to_log])
+        return X_transformed

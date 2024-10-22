@@ -3,6 +3,7 @@ from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
+from utils import to_dataframe_transformer
 
 class ImputeDataFrame(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -88,4 +89,4 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         # Usando get_feature_names_out para garantir que temos os nomes das colunas corretos
         col_names = self.preprocessor.get_feature_names_out()
         
-        return pd.DataFrame(X_imputed, columns=col_names)
+        return to_dataframe_transformer(X_imputed, column_names=col_names)
