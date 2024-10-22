@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
 from sklearn.base import TransformerMixin, BaseEstimator
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 
 class FixDatatypeTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -164,18 +164,21 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         ])
         
         self.low_missing_pipeline = Pipeline(steps=[
-            ('median_imputer', SimpleImputer(strategy='median'))  # Imputação por mediana
+            # ('knn_imputer', KNNImputer(n_neighbors=5))  # Imputação KNN
+            ('mean_imputer', SimpleImputer(strategy='mean'))  # Imputação por mediana
         ])
         
         self.mid_missing_pipeline = Pipeline(steps=[
-            ('knn_imputer', KNNImputer(n_neighbors=5))  # Imputação KNN
+            ('median_imputer', SimpleImputer(strategy='median'))  # Imputação por mediana
+            # ('iterative_imputer', IterativeImputer(estimator=DecisionTreeRegressor(), max_iter=10, random_state=42))  # Imputação Iterativa
         ])
-        
+
         self.high_missing_pipeline = Pipeline(steps=[
-            ('iterative_imputer', IterativeImputer(estimator=DecisionTreeRegressor(), max_iter=10, random_state=0))  # Imputação Iterativa
+            ('median_imputer', SimpleImputer(strategy='median'))  # Imputação por mediana
         ])
         
         self.categorical_pipeline = Pipeline(steps=[
+            # ('iterative_imputer', IterativeImputer(estimator=DecisionTreeClassifier(max_depth=10), max_iter=20, random_state=42))  # Imputação Iterativa
             ('mode_imputer', SimpleImputer(strategy='most_frequent'))  # Imputação pela moda
         ])
         
@@ -282,24 +285,11 @@ def create_full_pipeline():
     full_pipeline = Pipeline(steps=[
         ('fix_datatype', FixDatatypeTransformer()),  # Corrige tipos de dados
         ('drop_nan_cols', DropNanColsTransformer(threshold=0.6)),  # Remove colunas com muitos valores nulos
-        ('remove_high_corr', RemoveHighCorrelation(threshold=0.75)),
+        # ('remove_high_corr', RemoveHighCorrelation(threshold=0.9)),
         ('log_transform', LogTransformer(threshold_skew=0.5, threshold_outliers=1.5)),  # Definir os thresholds
         ('imputer', ImputeDataFrame()),  # Imputação
-        ('scaler', ScalerTransformer()),  # Aplica o StandardScaler nas colunas numéricas
+        # ('scaler', ScalerTransformer()),  # Aplica o StandardScaler nas colunas numéricas
         ('hot_encoder', CustomOneHotEncoder()) # Aplica o Hot Encoder nas colunas categóricas
     ])
     
     return full_pipeline
-
-def HotEncoderCategorical(X):
-    # Identifica as colunas categóricas
-    categorical_cols = X.select_dtypes(include=['object', 'category']).columns
-
-    # Cria um ColumnTransformer que aplica o OneHotEncoder apenas nas colunas categóricas
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_cols)  # OneHot nas categóricas
-        ],
-        remainder='passthrough'  # Deixa as colunas numéricas inalteradas
-    )
-    return preprocessor
