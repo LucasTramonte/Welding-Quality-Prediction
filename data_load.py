@@ -56,9 +56,8 @@ def load_data(target = 'Yield strength (MPa)'):
     ]
 
     # Separação dos dados em treino e teste
-    X = data.drop(columns = ["Yield strength (MPa)", "Weld ID"])
-    y = data[target]
-
+    X = data.drop(columns = ["Yield strength (MPa)", "Weld ID", "Ultimate tensile strength (MPa)"])
+    y = data[target]    
     return X, y
 
 def train_test_split_balance(X, y, test_size=0.2, random_state=42):

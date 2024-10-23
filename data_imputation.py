@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -10,14 +9,7 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
     def __init__(self):
         pass
 
-    # def fit(self, X, y=None):
-        # self.numeric_cols = X.dtype(np.numeric)
-        # self.col_to_impute_mean = ['Phosphorus concentration (weight%)', 'Sulphur concentration (weight%)']
-        # self.col_to_impute_zero = [col for col in X.columns if col not in self.col_to_impute_mean]
-        # self.value_to_impute_mean = X[self.col_to_impute_mean].mean()
-
-
-    def fit(self, X, y=None, strategy='median'):
+    def fit(self, X, y=None, strategy='knn'):
         self.numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
         self.categoric_features = X.select_dtypes(include=['object', 'category']).columns
         
@@ -25,7 +17,7 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         percent_n_missing = X.isnull().mean()
 
         # Definir colunas de concentração (exceto Phosphorus e Sulphur)
-        self.concentration_features = [col for col in self.numeric_features if "concentration" in col and ("Phosphorus" in col or "Sulphur" in col)]
+        self.concentration_features = [col for col in self.numeric_features if "concentration" in col and not("Phosphorus" in col or "Sulphur" in col)]
         
         # Definir as colunas com valores faltantes < 10%
         self.low_missing = percent_n_missing[(percent_n_missing <= 0.1)].index
@@ -42,12 +34,12 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         if strategy == 'median':            
             # Definindo o pipeline para colunas com valores faltantes moderados
             self.mid_missing_pipeline = Pipeline(steps=[
-                ('imputer', SimpleImputer(strategy='constant', fill_value=0))  # Escolhe o imputer baseado na estratégia
+                ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
             ])
             
             # Definindo o pipeline para colunas com muitos valores faltantes
             self.high_missing_pipeline = Pipeline(steps=[
-                ('imputer', SimpleImputer(strategy='constant', fill_value=0))  # Escolhe o imputer baseado na estratégia
+                ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
             ])
             
         else:
@@ -63,12 +55,12 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
 
         # Pipelines de imputação
         self.concentration_pipeline = Pipeline(steps=[
-            ('fill_zero', SimpleImputer(strategy='median'))  # Imputação por 0 nas concentrações
+            ('fill_zero', SimpleImputer(strategy='constant', fill_value=0))  # Imputação por 0 nas concentrações
         ])
         
         # Definindo o pipeline para colunas com poucos valores faltantes
         self.low_missing_pipeline = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='constant', fill_value=0))  # Escolhe o imputer baseado na estratégia
+            ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
         ])
 
         # Definindo o pipeline para colunas categóricas

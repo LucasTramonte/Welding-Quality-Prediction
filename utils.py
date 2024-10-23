@@ -1,5 +1,7 @@
 import joblib
 import pandas as pd
+import time
+from functools import wraps
 
 def save_model(model, filename):
     joblib.dump(model, filename)
@@ -31,3 +33,14 @@ def to_dataframe_transformer(X, column_names=None):
     # Convertendo colunas numéricas para float
     df[numeric_features_list] = df[numeric_features_list].astype('float')    
     return df
+
+def timing_decorator(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        print(f"Iniciando a função: {func.__name__}")
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Tempo para {func.__name__}: {end_time - start_time:.2f} segundos")
+        return result
+    return wrapper
