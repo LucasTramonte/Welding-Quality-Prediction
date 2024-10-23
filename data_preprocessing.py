@@ -45,7 +45,11 @@ class DropNanColsTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         percent_n = X.isnull().mean()
         self.cols_to_drop = percent_n[percent_n > self.threshold].index
+<<<<<<< HEAD
         print(percent_n.sort_values())
+=======
+        #print(self.cols_to_drop)
+>>>>>>> d52101e0a85d56067a589443fe6bf18fa034473b
         return self
 
     def transform(self, X, y=None):
