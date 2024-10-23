@@ -11,13 +11,19 @@ from feature_engineering import RemoveHighCorrelation, LogTransformer
 from data_transformation import ScalerTransformer, CustomOneHotEncoder, OutlierRemover
 
 class ImputeDataFrame(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        pass
+    def __init__(self, use_all_features=True):
+        """
+        use_all_features: se True, usa todas as features disponíveis para imputar valores faltantes em cada grupo.
+        """
+        self.use_all_features = use_all_features
 
-    def fit(self, X, y=None, strategy='knn'):
+    def fit(self, X, y=None):
+        """
+        Ajusta os pipelines de imputação para diferentes tipos de features.
+        """
         self.numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
         self.categoric_features = X.select_dtypes(include=['object', 'category']).columns
-        
+
         # Calcular a porcentagem de valores faltantes
         percent_n_missing = X.isnull().mean()
 
@@ -28,86 +34,96 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         self.low_missing = percent_n_missing[(percent_n_missing <= 0.1)].index
         self.low_missing = list(set(self.low_missing) - set(self.categoric_features))
         
+        self.mid_high_missing = percent_n_missing[(percent_n_missing > 0.1)].index
+        self.mid_high_missing = list(set(self.mid_high_missing) - set(self.categoric_features))
+
         # Definir as colunas com valores faltantes entre 10% e 50%
-        self.mid_missing = percent_n_missing[(percent_n_missing > 0.1) & (percent_n_missing <= 0.5)].index
-        self.mid_missing = list(set(self.mid_missing) - set(self.categoric_features))
+        # self.mid_missing = percent_n_missing[(percent_n_missing > 0.1)].index
+        # self.mid_missing = list(set(self.mid_missing) - set(self.categoric_features))
         
         # Definir as colunas com mais de 50% de valores faltantes
-        self.high_missing = percent_n_missing[(percent_n_missing > 0.5)].index
-        self.high_missing = list(set(self.high_missing) - set(self.categoric_features))
+        # self.high_missing = percent_n_missing[(percent_n_missing > 0.5)].index
+        # self.high_missing = list(set(self.high_missing) - set(self.categoric_features))
 
-        if strategy == 'median':            
-            # Definindo o pipeline para colunas com valores faltantes moderados
-            self.mid_missing_pipeline = Pipeline(steps=[
-                ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
-            ])
-            
-            # Definindo o pipeline para colunas com muitos valores faltantes
-            self.high_missing_pipeline = Pipeline(steps=[
-                ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
-            ])
-            
-        else:
-            # Definindo o pipeline para colunas com valores faltantes moderados
-            self.mid_missing_pipeline = Pipeline(steps=[
-                ('knn_imputer', KNNImputer(n_neighbors=10))  # Imputação KNN
-            ])
-            
-            # Definindo o pipeline para colunas com muitos valores faltantes
-            self.high_missing_pipeline = Pipeline(steps=[
-                ('knn_imputer', KNNImputer(n_neighbors=10))  # Imputação KNN
-            ])
+        # Pipelines para cada grupo de features
+        self.low_missing_pipeline = SimpleImputer(strategy='median')
+        self.mid_high_missing_pipeline = KNNImputer(n_neighbors=10)
+        # self.mid_missing_pipeline = KNNImputer(n_neighbors=10)
+        # self.high_missing_pipeline = KNNImputer(n_neighbors=10)
+        # self.high_missing_pipeline = IterativeImputer(estimator=RandomForestRegressor(random_state=42), random_state=42)
+        self.concentration_pipeline = SimpleImputer(strategy='constant', fill_value=0)
+        self.categorical_pipeline = SimpleImputer(strategy='most_frequent')
 
-        # Pipelines de imputação
-        self.concentration_pipeline = Pipeline(steps=[
-            ('fill_zero', SimpleImputer(strategy='constant', fill_value=0))  # Imputação por 0 nas concentrações
-        ])
-        
-        # Definindo o pipeline para colunas com poucos valores faltantes
-        self.low_missing_pipeline = Pipeline(steps=[
-            ('imputer', IterativeImputer(
-                estimator=RandomForestRegressor(n_estimators=100, random_state=42),
-                max_iter=10, random_state=42))  # Escolhe o imputer baseado na estratégia
-                    ])
+        # Ajustar os pipelines (usando todas as features ou apenas as do grupo)
+        self.low_missing_pipeline.fit(X[self.low_missing])
+        self.mid_high_missing_pipeline.fit(X[self.numeric_features] if self.use_all_features else X[self.mid_high_missing])
 
-        # Definindo o pipeline para colunas numéricas
-        self.numeric_pipeline = Pipeline(steps=[
-            ('knn_imputer', KNNImputer(n_neighbors=10))
-                    ])
-        
-        # Definindo o pipeline para colunas categóricas
-        self.categorical_pipeline = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent'))
-                    ])
+        # self.mid_missing_pipeline.fit(X[self.numeric_features] if self.use_all_features else X[self.mid_missing])
+        # self.high_missing_pipeline.fit(X[self.numeric_features] if self.use_all_features else X[self.high_missing])
+        self.concentration_pipeline.fit(X[self.concentration_features])
+        self.categorical_pipeline.fit(X[self.categoric_features])
 
-        # Criar um ColumnTransformer para aplicar os diferentes pipelines de imputação
-        self.preprocessor = ColumnTransformer(
-            transformers=[
-                # ('concentration', self.concentration_pipeline, self.concentration_features),  # Imputação nas colunas de concentração
-                ('numeric', self.numeric_pipeline, self.numeric_features),  # Imputação nas colunas com menos de 10% de valores faltantes
-                # ('mid_missing', self.mid_missing_pipeline, self.mid_missing),  # Imputação nas colunas com 10-50% de valores faltantes
-                # ('high_missing', self.high_missing_pipeline, self.high_missing),  # Imputação nas colunas com mais de 50% de valores faltantes
-                ('categoric_imputer', self.categorical_pipeline, self.categoric_features),  # Imputação nas colunas categóricas
-            ],
-            remainder='passthrough'  # Garante que as colunas não transformadas sejam preservadas e na mesma ordem
-        )
-
-        self.preprocessor.fit(X)
         return self
 
     def transform(self, X):
-        X_imputed = self.preprocessor.transform(X)
+        """
+        Aplica a imputação nos grupos de features selecionados.
+        """
+        X_transformed = X.copy()
+
+        # Imputação nas colunas de baixo missing
+        X_transformed[self.low_missing] = pd.DataFrame(self.low_missing_pipeline.transform(X[self.low_missing]), 
+                                                       columns=self.low_missing, 
+                                                       index=X.index)
+
+        # Imputação nas colunas de mid missing
+        if self.use_all_features:
+            # mid_missing_transformed = pd.DataFrame(self.mid_missing_pipeline.transform(X[self.numeric_features]), 
+            #                                        columns=self.numeric_features, 
+            #                                        index=X.index)
+            # X_transformed[self.mid_missing] = mid_missing_transformed[self.mid_missing]
+
+            # high_missing_transformed = pd.DataFrame(self.high_missing_pipeline.transform(X[self.numeric_features]), 
+            #                                         columns=self.numeric_features, 
+            #                                         index=X.index)
+            
+            # X_transformed[self.high_missing] = high_missing_transformed[self.high_missing]
+
+            mid_high_missing_transformed = pd.DataFrame(self.mid_high_missing_pipeline.transform(X[self.numeric_features]), 
+                                                   columns=self.numeric_features, 
+                                                   index=X.index)
+            X_transformed[self.mid_high_missing] = mid_high_missing_transformed[self.mid_high_missing]
+
+        else:
+            X_transformed[self.mid_high_missing] = pd.DataFrame(self.mid_high_missing_pipeline.transform(X[self.mid_high_missing]), 
+                                                           columns=self.mid_high_missing, 
+                                                           index=X.index)
+            # X_transformed[self.mid_missing] = pd.DataFrame(self.mid_missing_pipeline.transform(X[self.mid_missing]), 
+            #                                                columns=self.mid_missing, 
+            #                                                index=X.index)
+            # X_transformed[self.high_missing] = pd.DataFrame(self.high_missing_pipeline.transform(X[self.high_missing]), 
+            #                                                 columns=self.high_missing, 
+            #                                                 index=X.index)         
+
+        # Imputação nas colunas de concentração
+        X_transformed[self.concentration_features] = pd.DataFrame(self.concentration_pipeline.transform(X[self.concentration_features]), 
+                                                                  columns=self.concentration_features, 
+                                                                  index=X.index)
+
+        # Imputação nas colunas categóricas
+        X_transformed[self.categoric_features] = pd.DataFrame(self.categorical_pipeline.transform(X[self.categoric_features]), 
+                                                              columns=self.categoric_features, 
+                                                              index=X.index)
         
-        # Usando get_feature_names_out para garantir que temos os nomes das colunas corretos
-        col_names = self.preprocessor.get_feature_names_out()
-        
-        return to_dataframe_transformer(X_imputed, column_names=col_names)
+        print(X_transformed.isna().sum().sum())
+
+        return X_transformed
     
 def create_imputation_pipeline(include_outlier_removal=True):
     # Pipeline para a imputação e pré-processamento adicional
     steps = [
         ('imputer', ImputeDataFrame()),
-        ('log_transform', LogTransformer()),
+        # ('log_transform', LogTransformer()),
         ('one_hot_encoder', CustomOneHotEncoder()),
         ('scaler', ScalerTransformer(scaler='robust')),
     ]
