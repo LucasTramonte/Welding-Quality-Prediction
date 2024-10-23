@@ -1,4 +1,5 @@
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import Pipeline
 import numpy as np
 import pandas as pd
 
@@ -97,3 +98,14 @@ class DataAugmentor(BaseEstimator, TransformerMixin):
         X_final = pd.concat([X, X_augmented], ignore_index=True)
 
         return X_final
+    
+def create_augmentation_pipeline(augmentation_fraction=0.5, noise_level=0.01, random_state=None):
+    # Pipeline para data augmentation
+    augmentation_pipeline = Pipeline(steps=[
+        ('data_augmentor', DataAugmentor(
+            noise_level=noise_level,
+            augmentation_fraction=augmentation_fraction,
+            random_state=random_state
+        )),
+    ])
+    return augmentation_pipeline

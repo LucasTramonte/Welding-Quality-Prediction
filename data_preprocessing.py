@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.base import TransformerMixin, BaseEstimator
+from sklearn.pipeline import Pipeline
 
 class FixDatatypeTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -35,9 +36,12 @@ class FixDatatypeTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         X[self.numeric_features] = X[self.numeric_features].apply(pd.to_numeric, errors='coerce')
+        
+        X['Missing Elongation (%)'] = X['Elongation (%)'].isna().astype(int)    
+        X['Missing Reduction of Area (%)'] = X['Reduction of Area (%)'].isna().astype(int)    
+        X['Missing Molybdenum concentration (weight%)'] = X['Molybdenum concentration (weight%)'].isna().astype(int)    
+ 
         return X
-
-
 class DropNanColsTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, threshold):
         self.threshold = threshold
@@ -50,3 +54,12 @@ class DropNanColsTransformer(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         return X.drop(columns=self.cols_to_drop)
+    
+
+def create_preprocessing_pipeline():
+    # Pipeline para o pré-processamento (imputação, etc.)
+    preprocessing_pipeline = Pipeline(steps=[
+        ('fix_datatype', FixDatatypeTransformer()),
+        ('drop_nan_cols', DropNanColsTransformer(threshold=0.75)),
+    ])
+    return preprocessing_pipeline

@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 
 class OutlierRemover(BaseEstimator, TransformerMixin):
     def __init__(self, multiplier=1.5):
@@ -30,15 +30,31 @@ class OutlierRemover(BaseEstimator, TransformerMixin):
         X_clean = X_clean[mask].reset_index(drop=True)
         return X_clean
 
+
 class ScalerTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, scaler='standard'):
+        self.scaler_type = scaler
+        self.scaler = None
+        self.numeric_features = None
+
     def fit(self, X, y=None):
-        self.numeric_features = X.select_dtypes(include=['float64', 'int64']).columns
-        self.scaler = StandardScaler().fit(X[self.numeric_features])
+        # Identificar variáveis numéricas contínuas (excluindo binárias)
+        self.numeric_features = [col for col in X.columns if X[col].dtype in ['float64', 'int64'] and X[col].nunique() > 2]
+        
+        if self.scaler_type == 'standard':
+            self.scaler = StandardScaler()
+        elif self.scaler_type == 'robust':
+            self.scaler = RobustScaler()
+        else:
+            raise ValueError(f"Scaler {self.scaler_type} not recognized.")
+        
+        self.scaler.fit(X[self.numeric_features])
         return self
 
-    def transform(self, X, y=None):
-        X[self.numeric_features] = self.scaler.transform(X[self.numeric_features])
-        return X
+    def transform(self, X):
+        X_scaled = X.copy()
+        X_scaled[self.numeric_features] = self.scaler.transform(X[self.numeric_features])
+        return X_scaled
 
 
 class CustomOneHotEncoder(BaseEstimator, TransformerMixin):

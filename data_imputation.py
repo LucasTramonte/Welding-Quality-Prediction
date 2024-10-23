@@ -1,9 +1,14 @@
 import pandas as pd
-from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.experimental import enable_iterative_imputer
+
+from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from utils import to_dataframe_transformer
+from sklearn.ensemble import RandomForestRegressor
+from feature_engineering import RemoveHighCorrelation, LogTransformer
+from data_transformation import ScalerTransformer, CustomOneHotEncoder, OutlierRemover
 
 class ImputeDataFrame(BaseEstimator, TransformerMixin):
     def __init__(self):
@@ -60,22 +65,29 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         
         # Definindo o pipeline para colunas com poucos valores faltantes
         self.low_missing_pipeline = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='median'))  # Escolhe o imputer baseado na estratégia
-        ])
+            ('imputer', IterativeImputer(
+                estimator=RandomForestRegressor(n_estimators=100, random_state=42),
+                max_iter=10, random_state=42))  # Escolhe o imputer baseado na estratégia
+                    ])
 
+        # Definindo o pipeline para colunas numéricas
+        self.numeric_pipeline = Pipeline(steps=[
+            ('knn_imputer', KNNImputer(n_neighbors=10))
+                    ])
+        
         # Definindo o pipeline para colunas categóricas
         self.categorical_pipeline = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent'))  # Escolhe o imputer baseado na estratégia
-        ])
+            ('imputer', SimpleImputer(strategy='most_frequent'))
+                    ])
 
         # Criar um ColumnTransformer para aplicar os diferentes pipelines de imputação
         self.preprocessor = ColumnTransformer(
             transformers=[
-                ('concentration', self.concentration_pipeline, self.concentration_features),  # Imputação nas colunas de concentração
-                ('low_missing', self.low_missing_pipeline, self.low_missing),  # Imputação nas colunas com menos de 10% de valores faltantes
-                ('mid_missing', self.mid_missing_pipeline, self.mid_missing),  # Imputação nas colunas com 10-50% de valores faltantes
-                ('high_missing', self.high_missing_pipeline, self.high_missing),  # Imputação nas colunas com mais de 50% de valores faltantes
-                ('categoric_impute', self.categorical_pipeline, self.categoric_features),  # Imputação nas colunas categóricas
+                # ('concentration', self.concentration_pipeline, self.concentration_features),  # Imputação nas colunas de concentração
+                ('numeric', self.numeric_pipeline, self.numeric_features),  # Imputação nas colunas com menos de 10% de valores faltantes
+                # ('mid_missing', self.mid_missing_pipeline, self.mid_missing),  # Imputação nas colunas com 10-50% de valores faltantes
+                # ('high_missing', self.high_missing_pipeline, self.high_missing),  # Imputação nas colunas com mais de 50% de valores faltantes
+                ('categoric_imputer', self.categorical_pipeline, self.categoric_features),  # Imputação nas colunas categóricas
             ],
             remainder='passthrough'  # Garante que as colunas não transformadas sejam preservadas e na mesma ordem
         )
@@ -90,3 +102,18 @@ class ImputeDataFrame(BaseEstimator, TransformerMixin):
         col_names = self.preprocessor.get_feature_names_out()
         
         return to_dataframe_transformer(X_imputed, column_names=col_names)
+    
+def create_imputation_pipeline(include_outlier_removal=True):
+    # Pipeline para a imputação e pré-processamento adicional
+    steps = [
+        ('imputer', ImputeDataFrame()),
+        ('log_transform', LogTransformer()),
+        ('one_hot_encoder', CustomOneHotEncoder()),
+        ('scaler', ScalerTransformer(scaler='robust')),
+    ]
+    if include_outlier_removal:
+        # Inserir o OutlierRemover após a imputação
+        steps.insert(1, ('outlier_removal', OutlierRemover()))
+
+    imputation_pipeline = Pipeline(steps=steps)
+    return imputation_pipeline
