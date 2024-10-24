@@ -1,13 +1,20 @@
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest, f_regression
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error
+import numpy as np
+
+from sklearn.metrics import make_scorer, r2_score
 
 class ModelTrainer:
     def __init__(self, preprocessor=None, search_type="random", n_iter=10):
+        """
+        Initializes the ModelTrainer with options for preprocessor, 
+        search type (grid or random), and number of iterations for RandomizedSearchCV.
+        """
         self.best_estimators = {}
         self.preprocessor = preprocessor
         self.search_type = search_type  # Choose between 'grid' or 'random'
@@ -16,6 +23,7 @@ class ModelTrainer:
     def _get_search(self, pipeline, param_grid):
         """
         Select the type of hyperparameter search (GridSearchCV or RandomizedSearchCV).
+        Based on the search_type, it returns the appropriate search object.
         """
         if self.search_type == "grid":
             return GridSearchCV(pipeline, param_grid, cv=5, n_jobs=-1, scoring='neg_mean_squared_error')
@@ -24,7 +32,9 @@ class ModelTrainer:
 
     def _define_pipelines(self):
         """
-        Define pipelines with feature selection and the regressors.
+        Defines pipelines for multiple regression models: 
+        Decision Tree, Random Forest, Gradient Boosting, and XGBoost.
+        Each pipeline includes a preprocessor and a feature selection step.
         """
         return {
             "Decision Tree Regression": Pipeline([
@@ -51,7 +61,8 @@ class ModelTrainer:
 
     def _define_param_grids(self):
         """
-        Define parameter grids for hyperparameter tuning.
+        Defines parameter grids for hyperparameter tuning for each model.
+        Parameters include feature selection 'k', number of estimators, depth, etc.
         """
         return {
             "Decision Tree Regression": {
@@ -88,7 +99,8 @@ class ModelTrainer:
 
     def train_models(self, X_train, y_train):
         """
-        Build, tune, and train machine learning models using pipelines.
+        Trains and tunes models using hyperparameter tuning (GridSearchCV or RandomizedSearchCV)
+        and stores the best estimator for each model.
         """
         # Get pipelines and parameter grids
         pipelines = self._define_pipelines()
@@ -106,6 +118,39 @@ class ModelTrainer:
 
     def get_best_estimators(self):
         """
-        Retrieve the best estimators after hyperparameter tuning.
+        Returns the best estimators found during hyperparameter tuning for each model.
         """
         return self.best_estimators
+
+    def evaluate_best_model_with_cv(self, X_train, y_train, cv=10):
+        """
+        Evaluates the best models using cross-validation.
+        It computes the Mean Squared Error (MSE) and R² score for each model.
+        """
+        cv_scores = {}
+        
+        for model_name, best_estimator in self.best_estimators.items():
+            print(f"Evaluating {model_name} with cross-validation...")
+            
+            # Mean Squared Error
+            mse_scores = cross_val_score(best_estimator, X_train, y_train, cv=cv, scoring='neg_mean_squared_error')
+            mean_mse = np.mean(mse_scores)
+            std_mse = np.std(mse_scores)
+            
+            # R² Score
+            r2_scores = cross_val_score(best_estimator, X_train, y_train, cv=cv, scoring='r2')
+            mean_r2 = np.mean(r2_scores)
+            std_r2 = np.std(r2_scores)
+            
+            # Storing the results in a dictionary
+            cv_scores[model_name] = {
+                'mean_mse': -mean_mse,
+                'std_mse': std_mse,
+                'mean_r2': mean_r2,
+                'std_r2': std_r2
+            }
+            
+            print(f"{model_name} - Mean MSE: {-mean_mse}, Std MSE: {std_mse}")
+            print(f"{model_name} - Mean R²: {mean_r2}, Std R²: {std_r2}")
+        
+        return cv_scores

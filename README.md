@@ -72,10 +72,7 @@ A user-friendly web application built with Streamlit is available in the app.py 
     - Learning curves for different models.
 
 ## Conclusion
-This project demonstrated the use of various machine learning models to predict key weld properties based on chemical composition and welding parameters. The predictive models can help optimize welding processes by providing insights into how different parameters impact the mechanical strength of welds. Further improvements could be made by:
-
-- Fine-tuning hyperparameters.
-- Testing more advanced models like XGBoost or Neural Networks.
+This project demonstrated the use of various machine learning models to predict key weld properties based on chemical composition and welding parameters. The predictive models can help optimize welding processes by providing insights into how different parameters impact the mechanical strength of welds. 
 
 ## References
 - [1] Tracey Cool, Design of Steel Weld Deposits, PhD Thesis, University of Cambridge, 1996.

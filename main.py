@@ -17,12 +17,14 @@ import matplotlib.pyplot as plt
 import time
 from functools import wraps
 
+# Preprocessing pipeline that applies feature transformations to training and test data
 def preprocess_data(X_train, X_test):
     preprocessing_pipeline = create_preprocessing_pipeline()
     X_train_preprocessed = preprocessing_pipeline.fit_transform(X_train)
     X_test_preprocessed = preprocessing_pipeline.transform(X_test)
     return X_train_preprocessed, X_test_preprocessed
 
+# Imputation pipeline for missing data handling
 def impute_data(X_train_preprocessed, X_test_preprocessed):
     imputation_pipeline_train = create_imputation_pipeline(include_outlier_removal=False)
     imputation_pipeline_test = create_imputation_pipeline(include_outlier_removal=False)
@@ -33,6 +35,7 @@ def impute_data(X_train_preprocessed, X_test_preprocessed):
     
     return X_train_imputed, X_test_imputed
 
+# Data augmentation to generate synthetic data
 def augment_data(X_train_imputed, augmentation_fraction=0.3, noise_level=0.01, random_state=42):
     augmentation_pipeline = create_augmentation_pipeline(
         augmentation_fraction=augmentation_fraction, noise_level=noise_level, random_state=random_state)
@@ -40,30 +43,36 @@ def augment_data(X_train_imputed, augmentation_fraction=0.3, noise_level=0.01, r
     X_train_augmented.reset_index(drop=True, inplace=True)
     return X_train_augmented
 
+# Impute missing target values using a self-supervised approach
 def impute_target_data(y_train, X_train_augmented):
     n_original_samples = len(y_train)
     n_augmented_samples = len(X_train_augmented)
 
+    # Extend the target array with missing values for the augmented samples
     y_train_extended = pd.concat([
         y_train,
         pd.Series([np.nan] * (n_augmented_samples - n_original_samples))
     ], ignore_index=True)
 
+    # Impute missing target values based on KNN
     y_train_augmented = impute_target(y_train_extended, method='knn', X_train=X_train_augmented)
     
-    assert X_train_augmented.index.equals(y_train_augmented.index), "Os índices de X e y não estão alinhados após a imputação."
+    # Ensure that the indices between X and y are aligned after augmentation
+    assert X_train_augmented.index.equals(y_train_augmented.index), "Indices of X and y are misaligned after imputation."
     
     return y_train_augmented
 
+# Apply PCA for dimensionality reduction
 def apply_pca(X_train_augmented, y_train_augmented):
     preprocessor, _, _, _ = create_pca_preprocessor(
-        X_train_augmented, y_train_augmented, correlation_threshold=0.08, n_components=0.98, plot=False)
+        X_train_augmented, y_train_augmented, correlation_threshold=0.3, n_components=0.98, plot=False)
 
     preprocessor.fit(X_train_augmented)
     X_train_final = preprocessor.transform(X_train_augmented)
     
     return preprocessor, X_train_final
 
+# Train models and evaluate performance
 def train_and_evaluate_model(X_train_final, y_train_augmented, X_test_final, y_test):
     model_trainer = ModelTrainer(preprocessor=None)
     model_trainer.train_models(X_train_final, y_train_augmented)
@@ -73,7 +82,10 @@ def train_and_evaluate_model(X_train_final, y_train_augmented, X_test_final, y_t
     results_df = metrics_evaluator.evaluate_models(pipelines, X_test_final, y_test)
     print(results_df)
 
-# Flags para controle de etapas
+    # Evaluate the best model using cross-validation
+    cv_scores = model_trainer.evaluate_best_model_with_cv(X_train, y_train)
+
+# Flags for controlling each pipeline step
 RUN_INITIAL_PREPROCESS = True
 RUN_IMPUTE = True
 RUN_AUGMENTATION = True
@@ -105,10 +117,10 @@ if __name__ == "__main__":
         X_train = augment_data(X_train)
         print("Data augmentation applied.")
 
-        y_train= impute_target_data(y_train, X_train)
+        y_train = impute_target_data(y_train, X_train)
         print("Target imputation applied.")
 
-    # 6. Apply PCA
+    # 6. Apply PCA for dimensionality reduction
     if RUN_PCA:
         preprocessor, X_train = apply_pca(X_train, y_train)
         X_test = preprocessor.transform(X_test)

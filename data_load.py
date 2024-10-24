@@ -55,7 +55,7 @@ def load_data(target = 'Yield strength (MPa)'):
         'Weld ID'
     ]
 
-    # Separação dos dados em treino e teste
+    # Splitting data into train and test sets
     X = data.drop(columns = ["Yield strength (MPa)", "Weld ID", "Ultimate tensile strength (MPa)"])
     y = data[target]    
     return X, y
@@ -63,7 +63,7 @@ def load_data(target = 'Yield strength (MPa)'):
 def train_test_split_balance(X, y, test_size=0.2, random_state=42):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-    # Dropping missing values in test
+    # Dropping missing values in test set
     X_test_clean = X_test[~y_test.isna()]
     y_test_clean = y_test.dropna().astype(float)
 
