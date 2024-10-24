@@ -60,6 +60,10 @@ These models are used to predict both Yield Strength (MPa) and Ultimate Tensile 
 - R² Score
 - Mean Squared Error (MSE)
 
+In addition, the preprocessing and modeling used in main.ipnyb were broken down into the files dataset.py, data_preprocessing.py, feature_selection.py, imputer.py, imputer_new.py, main._att.py, modeling.py, pca.py, metrics_evaluation.py.
+
+By breaking down the code in this way and clicking classes, you can perform more tests in an organized way. As a result, not all the tests carried out in main.att.py are exposed to the reader in the main.ipynb file.
+
 ## Streamlit App
 
 A user-friendly web application built with Streamlit is available in the app.py script and can be accessed [here](https://lucastramonte-welding-quality-prediction-app-tusid3.streamlit.app/). This app allows users to:
@@ -74,7 +78,8 @@ A user-friendly web application built with Streamlit is available in the app.py 
 ## Conclusion
 This project demonstrated the use of various machine learning models to predict key weld properties based on chemical composition and welding parameters. The predictive models can help optimize welding processes by providing insights into how different parameters impact the mechanical strength of welds. Further improvements could be made by:
 
-- Fine-tuning hyperparameters.
+- Cross-validate and tune the hyperparameters to reduce overfitting, using randomized_gridsearch
+- Include more tests in the streamlit application for users, as the application tests do not yet correspond to the final version of the code.
 - Testing more advanced models like XGBoost or Neural Networks.
 
 ## References

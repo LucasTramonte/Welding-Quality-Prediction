@@ -1,42 +1,16 @@
-# %% [markdown]
-# # Machine Learning Project - IA mention CentraleSupélec
-# 
-# Under the supervision of :
-# 
-# - Myriam TAMI
-# 
-# Students:
-# 
-# - Lucas Tramonte
-# - Gabriel Souza Lima
-
-# %% [markdown]
-# # Libraries
-# 
-
-# %%
-
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns  
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.preprocessing import RobustScaler # it is not affected by outliers.
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import train_test_split, learning_curve
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.base import TransformerMixin, BaseEstimator
 
-from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, r2_score
-
-from sklearn.feature_selection import f_regression, SelectKBest, RFECV
 
 
 # %% [markdown]
@@ -152,7 +126,7 @@ def impute_dataframe(data_imputed: pd.DataFrame, categoric_features: list, numer
     return data_imputed
 
 # %%
-# 1. Transformer personalizado para remover colunas com muitos valores nulos
+# 1. Custom transformer to remove columns with many null values
 class DropNanColsTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, threshold=0.6):
         self.threshold = threshold
@@ -166,7 +140,7 @@ class DropNanColsTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         return X.drop(columns=self.cols_to_drop)
 
-# 2. Transformer para consertar os tipos de dados
+# 2. Transformer to fix data types
 class FixDatatypeTransformer(BaseEstimator, TransformerMixin):
     def __init__(self, categoric_features):
         self.categoric_features = categoric_features
@@ -181,7 +155,7 @@ class FixDatatypeTransformer(BaseEstimator, TransformerMixin):
         X[self.numeric_features] = X[self.numeric_features].apply(pd.to_numeric, errors='coerce')
         return X
 
-# 3. Função para aplicar o logaritmo
+# 3. Function to apply the logarithm
 def apply_log_transformer(df):
     log_columns = ['Silicon concentration (weight%)',
                    'Sulphur concentration (weight%)',
@@ -192,34 +166,37 @@ def apply_log_transformer(df):
                    'Oxygen concentration (ppm by weight)',
                    'Voltage (V)',
                    'Heat input (kJ/mm)']
-    df[log_columns] = np.log1p(df[log_columns])  # log(x + 1) para evitar problemas com zero
+    df[log_columns] = np.log1p(df[log_columns])  # log(x + 1) to avoid problems with zero
     return df
 
 log_transformer = FunctionTransformer(apply_log_transformer)
 
-# 4. Imputação dos dados
+# 4. Data imputation
+
 def impute_dataframe(numeric_features, categoric_features):
         
-    # Definir colunas de concentração (exceto Phosphorus e Sulphur)
+    # Define concentration columns (except Phosphorus and Sulphur)
+
     concentration_features = [col for col in numeric_features if "concentration" in col and not("Phosphorus" in col or "Sulphur" in col)]
     other_numeric_features = [col for col in numeric_features if col not in concentration_features]
     
-    # Imputação para colunas de concentração com zero
+    # Imputation for concentration columns with zero
+
     concentration_pipeline = Pipeline(steps=[
         ('fill_zero', SimpleImputer(strategy='constant', fill_value=0))
     ])
     
-    # Imputação para colunas numéricas com mediana
+    # Imputation for numerical columns with median
     numeric_pipeline = Pipeline(steps=[
         ('median_imputer', SimpleImputer(strategy='median'))
     ])
     
-    # Imputação para colunas categóricas com o valor mais frequente
+    # Imputation for categorical columns with the most frequent value
     categorical_pipeline = Pipeline(steps=[
-        ('mode_imputer', SimpleImputer(strategy='most_frequent'))  # Imputação categórica
+        ('mode_imputer', SimpleImputer(strategy='most_frequent'))  # Categorical imputation
     ])
     
-    # Criar um ColumnTransformer para aplicar os diferentes imputers e o OneHotEncoder
+    # Create a ColumnTransformer to apply the different imputers and OneHotEncoder
     preprocessor = ColumnTransformer(
     transformers=[
         ('concentration', concentration_pipeline, concentration_features),  # Imputação nas colunas de concentração
@@ -233,22 +210,25 @@ def to_dataframe_transformer(df):
     return pd.DataFrame(df)
 
 def hot_encoder_last_three_columns():
-    # Aqui estamos dizendo para aplicar o OneHotEncoder nas últimas 3 colunas (índices negativos)
+    # Here we are saying to apply OneHotEncoder to the last 3 columns (negative indexes)
     preprocessor = ColumnTransformer(
         transformers=[
-            ('onehot', OneHotEncoder(handle_unknown="ignore", sparse_output=False), [-3, -2, -1])  # Últimas 3 colunas
+            ('onehot', OneHotEncoder(handle_unknown="ignore", sparse_output=False), [-3, -2, -1])  # Last 3 columns
         ],
-        remainder='passthrough'  # Mantém as outras colunas inalteradas
+        remainder='passthrough'  # Keeps the other columns unchanged
+
     )
     return preprocessor
 
-# Função para identificar colunas binárias
+# Function to identify binary columns
+
 def identify_binary_columns(df):
-    binary_cols = [col for col in df.columns if df[col].nunique() == 2]  # Colunas com exatamente dois valores distintos
+    binary_cols = [col for col in df.columns if df[col].nunique() == 2]  # Columns with exactly two different values
+
     non_binary_cols = [col for col in df.columns if col not in binary_cols]
     return binary_cols, non_binary_cols
 
-# Transformer personalizado para identificar e aplicar o scaler nas colunas não binárias
+# Custom transformer to identify and apply the scaler to non-binary columns
 class BinaryScalerTransformer(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.non_binary_cols = None
@@ -257,50 +237,46 @@ class BinaryScalerTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         df = pd.DataFrame(X)
         _, self.non_binary_cols = identify_binary_columns(df)
-        # Definir o scaler para as colunas não binárias
+        # Set the scaler for non-binary columns
         self.scaler = StandardScaler()
-        # Fit o scaler apenas nas colunas não binárias
+        # Fit the scaler only to non-binary columns
         self.scaler.fit(df[self.non_binary_cols])
         return self
     
     def transform(self, X, y=None):
         df = pd.DataFrame(X).copy()
-        # Aplicar o scaler nas colunas não binárias
+        # Apply the scaler to non-binary columns
         df[self.non_binary_cols] = self.scaler.transform(df[self.non_binary_cols])
-        return df.values  # Retorna o resultado como numpy array para compatibilidade com o restante do pipeline
+        return df.values  # Returns the result as a numpy array for compatibility with the rest of the pipeline
 
 
-# 5. Inicialização do pipeline completo
+#5 Initialization of the complete pipeline
+
 def create_full_pipeline(numeric_features, categoric_features):
     full_pipeline = Pipeline(steps=[
-        ('drop_nan_cols', DropNanColsTransformer(threshold=0.6)),  # Remove colunas com muitos valores nulos
-        ('fix_datatype', FixDatatypeTransformer(categoric_features)),  # Corrige tipos de dados
-        ('apply_log', log_transformer),  # Aplica logaritmo nas colunas específicas
-        ('imputer', impute_dataframe(numeric_features, categoric_features)),  # Imputação
+        ('drop_nan_cols', DropNanColsTransformer(threshold=0.6)),  
+        ('fix_datatype', FixDatatypeTransformer(categoric_features)),  
+        ('apply_log', log_transformer),  
+        ('imputer', impute_dataframe(numeric_features, categoric_features)),  
         ('to_dataframe_transformer', FunctionTransformer(to_dataframe_transformer)),
-        ('one_hot', hot_encoder_last_three_columns()),  # OneHotEncoding nas últimas 3 colunas
-        ('binary_scaler', BinaryScalerTransformer())  # Aplica o StandardScaler nas colunas não binárias
+        ('one_hot', hot_encoder_last_three_columns()),  
+        ('binary_scaler', BinaryScalerTransformer())  
     ])
     return full_pipeline
 
-# Definição das colunas categóricas e numéricas
 categoric_features = ['AC or DC', 'Electrode positive or negative', 'Type of weld']
 numeric_features = ['Sulphur concentration (weight%)', 'Nickel concentration (weight%)', 
                     'Silicon concentration (weight%)', 'Phosphorus concentration (weight%)', 
                     'Titanium concentration (ppm by weight)', 'Nitrogen concentration (ppm by weight)', 
                     'Oxygen concentration (ppm by weight)', 'Voltage (V)', 'Heat input (kJ/mm)']
 
-# Criando o pipeline com as features necessárias
 full_pipeline = create_full_pipeline(numeric_features, categoric_features)
 
-# Separação dos dados em treino e teste
 X = data.drop(columns = ["Yield strength (MPa)"])
 y = data["Yield strength (MPa)"]
 # y.fillna(0, inplace=True)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Aplicando o pipeline nos dados de treino
 X_train_transformed = full_pipeline.fit_transform(X_train)
-# Aplicando o pipeline nos dados de teste
 X_test_transformed = full_pipeline.transform(X_test)
