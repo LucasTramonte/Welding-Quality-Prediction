@@ -83,7 +83,8 @@ def train_and_evaluate_model(X_train_final, y_train_augmented, X_test_final, y_t
     print(results_df)
 
     # Evaluate the best model using cross-validation
-    cv_scores = model_trainer.evaluate_best_model_with_cv(X_train, y_train)
+    _ = model_trainer.evaluate_best_model_with_cv(X_train, y_train)
+    model_trainer.plot_learning_curve(X_train, y_train, "XGBoost Regression", pipelines["XGBoost Regression"])
 
 # Flags for controlling each pipeline step
 RUN_INITIAL_PREPROCESS = True

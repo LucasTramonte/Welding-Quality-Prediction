@@ -1,13 +1,15 @@
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import SelectKBest, f_regression
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, cross_val_score, learning_curve
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 from sklearn.metrics import mean_squared_error
 import numpy as np
-
+import matplotlib.pyplot as plt
 from sklearn.metrics import make_scorer, r2_score
+
+
 
 class ModelTrainer:
     def __init__(self, preprocessor=None, search_type="random", n_iter=10):
@@ -154,3 +156,33 @@ class ModelTrainer:
             print(f"{model_name} - Mean R²: {mean_r2}, Std R²: {std_r2}")
         
         return cv_scores
+    
+    def plot_learning_curve(self, X_train, y_train, model_name, best_estimator, cv=5):
+        """
+        Plots the learning curve for the given model.
+        """
+        train_sizes, train_scores, test_scores = learning_curve(
+            best_estimator, X_train, y_train, cv=cv, scoring="neg_mean_squared_error", 
+            train_sizes=np.linspace(0.1, 1.0, 10), n_jobs=-1
+        )
+
+        # Compute the mean and standard deviation for training and test scores
+        train_scores_mean = -train_scores.mean(axis=1)
+        train_scores_std = train_scores.std(axis=1)
+        test_scores_mean = -test_scores.mean(axis=1)
+        test_scores_std = test_scores.std(axis=1)
+
+        plt.figure(figsize=(8, 6))
+        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                         train_scores_mean + train_scores_std, alpha=0.1, color="r")
+        plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                         test_scores_mean + test_scores_std, alpha=0.1, color="g")
+        plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Training score")
+        plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Validation score")
+
+        plt.title(f'Learning Curve for {model_name}')
+        plt.xlabel("Training examples")
+        plt.ylabel("Mean Squared Error")
+        plt.legend(loc="best")
+        plt.grid(True)
+        plt.show()
