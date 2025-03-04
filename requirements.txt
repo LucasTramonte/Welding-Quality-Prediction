@@ -5,3 +5,5 @@ matplotlib
 seaborn
 streamlit
 imbalanced-learn
+jupyter
+statsmodels
